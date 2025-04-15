@@ -138,7 +138,7 @@ class InteractiveDecoder(nn.Module):
 
 
 class ExternalMemInteractiveDecoder(nn.Module):
-    def __init__(self, cell, helper, initial_state, initial_history_masking, interesting, mem, rnn_size, output_layer=None):
+    def __init__(self, cell, helper, initial_state, initial_history_masking, interesting, mem, rnn_size, device, output_layer=None):
         super(ExternalMemInteractiveDecoder, self).__init__()
         self._cell = cell
         self._helper = helper
@@ -148,10 +148,10 @@ class ExternalMemInteractiveDecoder(nn.Module):
         self._interesting = interesting
         
         # Memory components
-        self.mem_output_layer = nn.Linear(mem.shape[-1], rnn_size, bias=False)
+        self.mem_output_layer = nn.Linear(mem.shape[-1], rnn_size, bias=False).to(device)
         self._mem = torch.tanh(self.mem_output_layer(mem))
-        self.forget_gate_mem_part = nn.Linear(rnn_size, rnn_size, bias=True)
-        self.forget_gate_cell_part = nn.Linear(rnn_size, rnn_size, bias=False)
+        self.forget_gate_mem_part = nn.Linear(rnn_size, rnn_size, bias=True).to(device)
+        self.forget_gate_cell_part = nn.Linear(rnn_size, rnn_size, bias=False).to(device)
     
     def initialize(self):
         finished, first_inputs = self._helper.initialize()
@@ -524,7 +524,7 @@ class EMInteractiveModel(nn.Module):
         
         decoder = ExternalMemInteractiveDecoder(
             self.decoder_cell, helper, init_state, user_masking, 
-            user_interesting, mem, self.rnn_size, output_fn)
+            user_interesting, mem, self.rnn_size, self.device, output_fn)
         
         # Run dynamic decoding
         outputs, final_state, final_history_masking, hit, final_sequence_lengths = dynamic_interactive_decode(
